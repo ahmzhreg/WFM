@@ -107,15 +107,9 @@ if st.button("Submit Assessment", type="primary"):
     if not candidate_name or not candidate_email or not uploaded_excel:
         st.error("⚠️ Please fill in your Name, Email, and upload the Excel test before submitting.")
     else:
-        # Save Excel File
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        safe_name = candidate_name.replace(" ", "_")
-        file_path = f"uploaded_tests/{safe_name}_{timestamp}_{uploaded_excel.name}"
+        st.info("Processing submission and securely sending data... Please wait.")
         
-        with open(file_path, "wb") as f:
-            f.write(uploaded_excel.getbuffer())
-        
-        # Auto-Score MCQs (10 points each)
+        # 1. Auto-Score MCQs
         score = 0
         if q1 and q1.startswith("C"): score += 10
         if q2 and q2.startswith("B"): score += 10
@@ -127,30 +121,56 @@ if st.button("Submit Assessment", type="primary"):
         if q8 and q8.startswith("B"): score += 10
         if q9 and q9.startswith("C"): score += 10
         if q10 and q10.startswith("C"): score += 10
+
+        # 2. Email Delivery Engine
+        import smtplib
+        from email.message import EmailMessage
         
-        # Compile Data
-        submission_data = {
-            "Timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "Candidate Name": candidate_name,
-            "Email": candidate_email,
-            "MCQ Score (Max 100)": score,
-            "Excel File Path": file_path,
-            "Q1": q1, "Q2": q2, "Q3": q3, "Q4": q4, "Q5": q5,
-            "Q6": q6, "Q7": q7, "Q8": q8, "Q9": q9, "Q10": q10,
-            "Crisis Response": q11,
-            "Fatigue Response": q12,
-            "Automation Response": q13
-        }
-        
-        # Save to CSV
-        df = pd.DataFrame([submission_data])
-        csv_file = "candidate_submissions.csv"
-        if not os.path.isfile(csv_file):
-            df.to_csv(csv_file, index=False)
-        else:
-            df.to_csv(csv_file, mode='a', header=False, index=False)
-        
-        st.session_state.submitted = True
-        st.success("✅ Assessment Submitted Successfully!")
-        st.write(f"**Your MCQ Theory Score:** {score} / 100")
-        st.write("Thank you for your time. The recruitment team will review your Excel upload and operational responses shortly.")
+        try:
+            # Construct the Email
+            msg = EmailMessage()
+            msg['Subject'] = f"🚨 New WFM Assessment: {candidate_name} - Score: {score}/100"
+            msg['From'] = st.secrets["email_user"]
+            msg['To'] = st.secrets["email_receiver"] # Your email address
+            
+            # Format the body of the email
+            email_body = f"""
+            Candidate Assessment Completed!
+            
+            Name: {candidate_name}
+            Email: {candidate_email}
+            Theory Score: {score}/100
+            
+            --- Intraday Crisis Response ---
+            {q11}
+            
+            --- Fatigue Management Response ---
+            {q12}
+            
+            --- Automation Response ---
+            {q13}
+            
+            *The completed Excel data test is attached to this email.*
+            """
+            msg.set_content(email_body)
+            
+            # Attach the Candidate's Excel File
+            excel_data = uploaded_excel.getvalue()
+            msg.add_attachment(
+                excel_data,
+                maintype='application',
+                subtype='vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                filename=f"{candidate_name.replace(' ', '_')}_WFM_Test.xlsx"
+            )
+            
+            # Send the email via Gmail Server
+            with smtplib.SMTP_SSL('smtp.gmail.com', 465) as smtp:
+                smtp.login(st.secrets["email_user"], st.secrets["email_password"])
+                smtp.send_message(msg)
+                
+            st.session_state.submitted = True
+            st.success("✅ Assessment Submitted Successfully!")
+            st.write(f"**Your MCQ Theory Score:** {score} / 100")
+            
+        except Exception as e:
+            st.error("An error occurred. Please contact the recruitment team directly.")
