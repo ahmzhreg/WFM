@@ -68,7 +68,6 @@ with tab1:
     q10 = st.radio("10. When applying PDCA (Plan-Do-Check-Act) to WFM Continuous Improvement, analyzing root causes for forecast misses falls under which phase?",
         options=["A) Plan", "B) Do", "C) Check", "D) Act"], index=None)
 
-
 # --- SECTION 2: EXCEL UPLOAD ---
 with tab2:
     st.header("Section 2: Practical Data Analysis")
@@ -81,15 +80,13 @@ with tab2:
     5. Reporting Pivot & Dashboard
     """)
     
-    # The magical direct-download link
     st.markdown("### [📥 Click Here to Download the WFM_TL_Excel_Test.xlsx](https://docs.google.com/spreadsheets/d/1OCexYljty2ZZZzzgS8iTP8HssByQFQll/export?format=xlsx)")
     
     st.info("💡 **Instructions:** Once completed, save your file in the format `Firstname_Lastname_WFM_Test.xlsx` before uploading.")
     
     uploaded_excel = st.file_uploader("Upload your completed Excel test here *", type=["xlsx", "xls", "csv"])
 
-
-# --- SECTION 3: OPEN-ENDED ---
+# --- SECTION 3: OPEN-ENDED & SUBMISSION ---
 with tab3:
     st.header("Section 3: Operations Floor & Leadership")
     st.write("Provide structured, professional responses detailing your operational logic.")
@@ -100,9 +97,9 @@ with tab3:
     
     q13 = st.text_area("3. Continuous Improvement & Automation:\nAs the functional owner of the WFM platform, you notice the team spends 3 hours a day manually consolidating reports in Excel. Walk through your strategy to automate this reporting cadence and ensure data integrity.", height=150)
 
-st.divider()
+    st.divider()
 
-    # --- SUBMISSION LOGIC ---
+    # --- SUBMISSION LOGIC (Properly Indented) ---
     if st.button("Submit Assessment", type="primary"):
         if not candidate_name or not candidate_email or not uploaded_excel:
             st.error("⚠️ Please fill in your Name, Email, and upload the Excel test before submitting.")
@@ -127,13 +124,11 @@ st.divider()
             from email.message import EmailMessage
             
             try:
-                # Construct the Email
                 msg = EmailMessage()
                 msg['Subject'] = f"🚨 New WFM Assessment: {candidate_name} - Score: {score}/100"
                 msg['From'] = st.secrets["email_user"]
-                msg['To'] = st.secrets["email_receiver"] # Your email address
+                msg['To'] = st.secrets["email_receiver"]
                 
-                # Format the body of the email
                 email_body = f"""
                 Candidate Assessment Completed!
                 
@@ -149,12 +144,10 @@ st.divider()
                 
                 --- Automation Response ---
                 {q13}
-                
-                *The completed Excel data test is attached to this email.*
                 """
                 msg.set_content(email_body)
                 
-                # Attach the Candidate's Excel File
+                # Attach Excel
                 excel_data = uploaded_excel.getvalue()
                 msg.add_attachment(
                     excel_data,
@@ -163,7 +156,6 @@ st.divider()
                     filename=f"{candidate_name.replace(' ', '_')}_WFM_Test.xlsx"
                 )
                 
-                # Send the email via Gmail Server
                 with smtplib.SMTP_SSL('smtp.gmail.com', 465) as smtp:
                     smtp.login(st.secrets["email_user"], st.secrets["email_password"])
                     smtp.send_message(msg)
@@ -173,4 +165,4 @@ st.divider()
                 st.write(f"**Your MCQ Theory Score:** {score} / 100")
                 
             except Exception as e:
-                st.error("An error occurred. Please contact the recruitment team directly.")
+                st.error("An error occurred. Please check that your email secrets are configured correctly in Streamlit Cloud.")
