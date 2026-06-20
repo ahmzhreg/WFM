@@ -1,9 +1,10 @@
 import streamlit as st
 import pandas as pd
 import os
-from datetime import datetime
 import smtplib
 from email.message import EmailMessage
+import openpyxl
+from io import BytesIO
 
 # --- System Setup ---
 st.set_page_config(page_title="WFM Assessment Portal", page_icon="📊", layout="wide")
@@ -12,17 +13,18 @@ if not os.path.exists("uploaded_tests"):
     os.makedirs("uploaded_tests")
 
 # --- Initialize Session State (The App's Memory) ---
-# This ensures data isn't lost when the user moves between steps
 if 'step' not in st.session_state:
     st.session_state.step = 1
     
 session_keys = ["name", "email", "q1", "q2", "q3", "q4", "q5", "q6", "q7", "q8", "q9", "q10",
-                "excel_data", "excel_filename", "q11", "q12", "q13"]
+                "excel_data", "excel_filename", "q11", "q12", "q13", "final_theory", "final_excel"]
 for key in session_keys:
     if key not in st.session_state:
         st.session_state[key] = None if key.startswith("q") and int(key[1:]) <= 10 else ""
+        if key in ["final_theory", "final_excel"]:
+            st.session_state[key] = 0
 
-# --- Helper Functions for Navigation & State ---
+# --- Helper Functions for Navigation ---
 def next_step():
     st.session_state.step += 1
 
@@ -87,7 +89,7 @@ if st.session_state.step == 1:
 
     st.divider()
     
-    # Validation: Check if all Step 1 fields have a value
+    # Validation: Ensure all questions are answered
     step1_complete = all([
         st.session_state.name, st.session_state.email, st.session_state.q1, st.session_state.q2,
         st.session_state.q3, st.session_state.q4, st.session_state.q5, st.session_state.q6,
@@ -116,20 +118,17 @@ elif st.session_state.step == 2:
     st.markdown("### [📥 Click Here to Download the WFM_TL_Excel_Test.xlsx](https://docs.google.com/spreadsheets/d/1OCexYljty2ZZZzzgS8iTP8HssByQFQll/export?format=xlsx)")
     st.info("💡 **Instructions:** Once completed, save your file in the format `Firstname_Lastname_WFM_Test.xlsx` before uploading.")
     
-    # Show success message if they already uploaded it and clicked back
     if st.session_state.excel_data:
         st.success(f"✅ File successfully saved: **{st.session_state.excel_filename}**. You may proceed, or upload a new file to replace it.")
 
-    uploaded_excel = st.file_uploader("Upload your completed Excel test here *", type=["xlsx", "xls", "csv"])
+    uploaded_excel = st.file_uploader("Upload your completed Excel test here *", type=["xlsx", "xls"])
     
-    # Save the file immediately to memory so it isn't lost if they go to Step 3
     if uploaded_excel is not None:
         st.session_state.excel_data = uploaded_excel.getvalue()
         st.session_state.excel_filename = uploaded_excel.name
 
     st.divider()
     
-    # Validation: Check if file is in memory
     step2_complete = bool(st.session_state.excel_data)
     
     if not step2_complete:
@@ -157,7 +156,6 @@ elif st.session_state.step == 3:
 
     st.divider()
 
-    # Validation: Check if text boxes are filled
     step3_complete = bool(st.session_state.q11.strip() and st.session_state.q12.strip() and st.session_state.q13.strip())
     
     if not step3_complete:
@@ -169,27 +167,62 @@ elif st.session_state.step == 3:
     with col2:
         if st.button("🚀 Submit Final Assessment", disabled=not step3_complete, type="primary"):
             
-            st.info("Processing submission and securely sending data... Please wait.")
+            st.info("Grading assessment and securely sending data... Please wait.")
             
-            # 1. Auto-Score MCQs
-            score = 0
-            if st.session_state.q1.startswith("C"): score += 10
-            if st.session_state.q2.startswith("B"): score += 10
-            if st.session_state.q3.startswith("A"): score += 10
-            if st.session_state.q4.startswith("B"): score += 10
-            if st.session_state.q5.startswith("C"): score += 10
-            if st.session_state.q6.startswith("B"): score += 10
-            if st.session_state.q7.startswith("B"): score += 10
-            if st.session_state.q8.startswith("B"): score += 10
-            if st.session_state.q9.startswith("C"): score += 10
-            if st.session_state.q10.startswith("C"): score += 10
-            
-            st.session_state.final_score = score
+            # --- 1. THEORY AUTO-SCORE (100 Points) ---
+            theory_score = 0
+            if st.session_state.q1.startswith("C"): theory_score += 10
+            if st.session_state.q2.startswith("B"): theory_score += 10
+            if st.session_state.q3.startswith("A"): theory_score += 10
+            if st.session_state.q4.startswith("B"): theory_score += 10
+            if st.session_state.q5.startswith("C"): theory_score += 10
+            if st.session_state.q6.startswith("B"): theory_score += 10
+            if st.session_state.q7.startswith("B"): theory_score += 10
+            if st.session_state.q8.startswith("B"): theory_score += 10
+            if st.session_state.q9.startswith("C"): theory_score += 10
+            if st.session_state.q10.startswith("C"): theory_score += 10
+            st.session_state.final_theory = theory_score
 
-            # 2. Email Delivery Engine
+            # --- 2. EXCEL PRACTICAL AUTO-SCORE (100 Points) ---
+            excel_score = 0
+            try:
+                # Load the Excel file directly from memory, reading calculated values
+                wb = openpyxl.load_workbook(BytesIO(st.session_state.excel_data), data_only=True)
+                
+                # TASK 1: Forecast Accuracy (20 Points)
+                ws1 = wb["2. Forecast Accuracy"]
+                if ws1["B10"].value == 0.05:  # UPDATE 'B10' & '0.05' WITH YOUR ACTUAL KEY
+                    excel_score += 20
+
+                # TASK 2: Erlang & Required FTE (25 Points)
+                ws2 = wb["3. Erlang & FTE"]
+                if ws2["C15"].value == 42:    # UPDATE 'C15' & '42' WITH YOUR ACTUAL KEY
+                    excel_score += 25
+
+                # TASK 3: Schedule Efficiency (20 Points)
+                ws3 = wb["4. Schedule Efficiency"]
+                if ws3["D20"].value == 0.88:  # UPDATE 'D20' & '0.88' WITH YOUR ACTUAL KEY
+                    excel_score += 20
+
+                # TASK 4: Intraday Decision (20 Points)
+                ws4 = wb["5. Intraday Decision"]
+                if ws4["E5"].value == "Move to Voice": # UPDATE 'E5' WITH YOUR ACTUAL KEY
+                    excel_score += 20
+
+                # TASK 5: Reporting Pivot (15 Points)
+                ws5 = wb["6. Reporting Pivot"]
+                if ws5["B12"].value == 1500:  # UPDATE 'B12' & '1500' WITH YOUR ACTUAL KEY
+                    excel_score += 15
+                    
+            except Exception as e:
+                st.warning("Note: Could not automatically read Excel data. Please grade manually via the attached file.")
+                
+            st.session_state.final_excel = excel_score
+
+            # --- 3. EMAIL DELIVERY ENGINE ---
             try:
                 msg = EmailMessage()
-                msg['Subject'] = f"🚨 New WFM Assessment: {st.session_state.name} - Score: {score}/100"
+                msg['Subject'] = f"🚨 New WFM Assessment: {st.session_state.name} | Theory: {theory_score}/100 | Excel: {excel_score}/100"
                 msg['From'] = st.secrets["email_user"]
                 msg['To'] = st.secrets["email_receiver"]
                 
@@ -198,20 +231,25 @@ elif st.session_state.step == 3:
                 
                 Name: {st.session_state.name}
                 Email: {st.session_state.email}
-                Theory Score: {score}/100
                 
-                --- Intraday Crisis Response ---
+                --- AUTO-SCORES ---
+                Theory (MCQ) Score: {theory_score}/100
+                Practical (Excel) Score: {excel_score}/100
+                
+                --- LEADERSHIP SCENARIOS (Manual Grading Required) ---
+                Please use your Open-Ended & Scenarios Rubric to grade the following responses:
+                
+                1. Intraday Crisis Response:
                 {st.session_state.q11}
                 
-                --- Fatigue Management Response ---
+                2. Fatigue Management Response:
                 {st.session_state.q12}
                 
-                --- Automation Response ---
+                3. Automation Response:
                 {st.session_state.q13}
                 """
                 msg.set_content(email_body)
                 
-                # Attach Excel stored in session memory
                 msg.add_attachment(
                     st.session_state.excel_data,
                     maintype='application',
@@ -223,12 +261,11 @@ elif st.session_state.step == 3:
                     smtp.login(st.secrets["email_user"], st.secrets["email_password"])
                     smtp.send_message(msg)
                     
-                # Move to Success Screen
                 st.session_state.step = 4
                 st.rerun()
                 
             except Exception as e:
-                st.error(f"An error occurred sending the email. Ensure Streamlit Secrets are set. Error details: {e}")
+                st.error(f"An error occurred sending the email. Error details: {e}")
 
 # ==========================================
 # STEP 4: SUCCESS / COMPLETION SCREEN
@@ -236,5 +273,36 @@ elif st.session_state.step == 3:
 elif st.session_state.step == 4:
     st.success("✅ Assessment Submitted Successfully!")
     st.balloons()
-    st.markdown(f"### **Your MCQ Theory Score:** {st.session_state.final_score} / 100")
-    st.write("Thank you for your time. The Boutiqaat recruitment team has received your test and will review your Excel upload and operational responses shortly. You may now close this window.")
+    
+    # Display the two scores side-by-side
+    col1, col2 = st.columns(2)
+    with col1:
+        st.metric(label="📚 Theory Score", value=f"{st.session_state.final_theory} / 100")
+    with col2:
+        st.metric(label="🧮 Practical Excel Score", value=f"{st.session_state.final_excel} / 100")
+        
+    st.markdown("---")
+    
+    # The Interactive Score Breakdown for MCQs
+    with st.expander("📊 View Theory Score Breakdown"):
+        answer_key = {
+            "Q1": ("C", st.session_state.q1),
+            "Q2": ("B", st.session_state.q2),
+            "Q3": ("A", st.session_state.q3),
+            "Q4": ("B", st.session_state.q4),
+            "Q5": ("C", st.session_state.q5),
+            "Q6": ("B", st.session_state.q6),
+            "Q7": ("B", st.session_state.q7),
+            "Q8": ("B", st.session_state.q8),
+            "Q9": ("C", st.session_state.q9),
+            "Q10": ("C", st.session_state.q10),
+        }
+        
+        st.write("Here is how your theoretical knowledge was evaluated against SWPP/COPC standards:")
+        for q, (correct_letter, user_ans) in answer_key.items():
+            if user_ans.startswith(correct_letter):
+                st.markdown(f"✅ **{q}:** Correct ({user_ans[:2]})")
+            else:
+                st.markdown(f"❌ **{q}:** Incorrect (You chose {user_ans[:2]} | Correct was {correct_letter})")
+
+    st.write("Thank you for your time. The Boutiqaat recruitment team has received your test and will review your leadership scenarios shortly. You may now close this window.")
