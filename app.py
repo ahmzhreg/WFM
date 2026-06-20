@@ -102,75 +102,75 @@ with tab3:
 
 st.divider()
 
-# --- SUBMISSION LOGIC ---
-if st.button("Submit Assessment", type="primary"):
-    if not candidate_name or not candidate_email or not uploaded_excel:
-        st.error("⚠️ Please fill in your Name, Email, and upload the Excel test before submitting.")
-    else:
-        st.info("Processing submission and securely sending data... Please wait.")
-        
-        # 1. Auto-Score MCQs
-        score = 0
-        if q1 and q1.startswith("C"): score += 10
-        if q2 and q2.startswith("B"): score += 10
-        if q3 and q3.startswith("A"): score += 10
-        if q4 and q4.startswith("B"): score += 10
-        if q5 and q5.startswith("C"): score += 10
-        if q6 and q6.startswith("B"): score += 10
-        if q7 and q7.startswith("B"): score += 10
-        if q8 and q8.startswith("B"): score += 10
-        if q9 and q9.startswith("C"): score += 10
-        if q10 and q10.startswith("C"): score += 10
+    # --- SUBMISSION LOGIC ---
+    if st.button("Submit Assessment", type="primary"):
+        if not candidate_name or not candidate_email or not uploaded_excel:
+            st.error("⚠️ Please fill in your Name, Email, and upload the Excel test before submitting.")
+        else:
+            st.info("Processing submission and securely sending data... Please wait.")
+            
+            # 1. Auto-Score MCQs
+            score = 0
+            if q1 and q1.startswith("C"): score += 10
+            if q2 and q2.startswith("B"): score += 10
+            if q3 and q3.startswith("A"): score += 10
+            if q4 and q4.startswith("B"): score += 10
+            if q5 and q5.startswith("C"): score += 10
+            if q6 and q6.startswith("B"): score += 10
+            if q7 and q7.startswith("B"): score += 10
+            if q8 and q8.startswith("B"): score += 10
+            if q9 and q9.startswith("C"): score += 10
+            if q10 and q10.startswith("C"): score += 10
 
-        # 2. Email Delivery Engine
-        import smtplib
-        from email.message import EmailMessage
-        
-        try:
-            # Construct the Email
-            msg = EmailMessage()
-            msg['Subject'] = f"🚨 New WFM Assessment: {candidate_name} - Score: {score}/100"
-            msg['From'] = st.secrets["email_user"]
-            msg['To'] = st.secrets["email_receiver"] # Your email address
+            # 2. Email Delivery Engine
+            import smtplib
+            from email.message import EmailMessage
             
-            # Format the body of the email
-            email_body = f"""
-            Candidate Assessment Completed!
-            
-            Name: {candidate_name}
-            Email: {candidate_email}
-            Theory Score: {score}/100
-            
-            --- Intraday Crisis Response ---
-            {q11}
-            
-            --- Fatigue Management Response ---
-            {q12}
-            
-            --- Automation Response ---
-            {q13}
-            
-            *The completed Excel data test is attached to this email.*
-            """
-            msg.set_content(email_body)
-            
-            # Attach the Candidate's Excel File
-            excel_data = uploaded_excel.getvalue()
-            msg.add_attachment(
-                excel_data,
-                maintype='application',
-                subtype='vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                filename=f"{candidate_name.replace(' ', '_')}_WFM_Test.xlsx"
-            )
-            
-            # Send the email via Gmail Server
-            with smtplib.SMTP_SSL('smtp.gmail.com', 465) as smtp:
-                smtp.login(st.secrets["email_user"], st.secrets["email_password"])
-                smtp.send_message(msg)
+            try:
+                # Construct the Email
+                msg = EmailMessage()
+                msg['Subject'] = f"🚨 New WFM Assessment: {candidate_name} - Score: {score}/100"
+                msg['From'] = st.secrets["email_user"]
+                msg['To'] = st.secrets["email_receiver"] # Your email address
                 
-            st.session_state.submitted = True
-            st.success("✅ Assessment Submitted Successfully!")
-            st.write(f"**Your MCQ Theory Score:** {score} / 100")
-            
-        except Exception as e:
-            st.error("An error occurred. Please contact the recruitment team directly.")
+                # Format the body of the email
+                email_body = f"""
+                Candidate Assessment Completed!
+                
+                Name: {candidate_name}
+                Email: {candidate_email}
+                Theory Score: {score}/100
+                
+                --- Intraday Crisis Response ---
+                {q11}
+                
+                --- Fatigue Management Response ---
+                {q12}
+                
+                --- Automation Response ---
+                {q13}
+                
+                *The completed Excel data test is attached to this email.*
+                """
+                msg.set_content(email_body)
+                
+                # Attach the Candidate's Excel File
+                excel_data = uploaded_excel.getvalue()
+                msg.add_attachment(
+                    excel_data,
+                    maintype='application',
+                    subtype='vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                    filename=f"{candidate_name.replace(' ', '_')}_WFM_Test.xlsx"
+                )
+                
+                # Send the email via Gmail Server
+                with smtplib.SMTP_SSL('smtp.gmail.com', 465) as smtp:
+                    smtp.login(st.secrets["email_user"], st.secrets["email_password"])
+                    smtp.send_message(msg)
+                    
+                st.session_state.submitted = True
+                st.success("✅ Assessment Submitted Successfully!")
+                st.write(f"**Your MCQ Theory Score:** {score} / 100")
+                
+            except Exception as e:
+                st.error("An error occurred. Please contact the recruitment team directly.")
