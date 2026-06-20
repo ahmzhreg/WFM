@@ -73,15 +73,19 @@ with tab1:
 with tab2:
     st.header("Section 2: Practical Data Analysis")
     st.markdown("""
-    Please complete the **WFM_TL_Excel_Test.xlsx** provided to you by the recruitment team. 
-    Ensure you have completed all sheets before uploading:
+    Please download the **WFM Data Test** using the link below. Ensure you have completed all sheets before uploading your final version:
     1. Forecast Accuracy
     2. Erlang & FTE Calculation
     3. Schedule Efficiency
     4. Intraday Decision Logic
     5. Reporting Pivot & Dashboard
     """)
-    st.info("💡 **Instructions:** Save your completed file in the format `Firstname_Lastname_WFM_Test.xlsx` before uploading.")
+    
+    # The magical direct-download link
+    st.markdown("### [📥 Click Here to Download the WFM_TL_Excel_Test.xlsx](https://docs.google.com/spreadsheets/d/1OCexYljty2ZZZzzgS8iTP8HssByQFQll/export?format=xlsx)")
+    
+    st.info("💡 **Instructions:** Once completed, save your file in the format `Firstname_Lastname_WFM_Test.xlsx` before uploading.")
+    
     uploaded_excel = st.file_uploader("Upload your completed Excel test here *", type=["xlsx", "xls", "csv"])
 
 
